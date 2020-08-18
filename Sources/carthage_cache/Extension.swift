@@ -11,12 +11,17 @@ import ReactiveTask
 
 extension SignalProducer where Error == CarthageError {
     /// Waits on a SignalProducer that implements the behavior of a CommandProtocol.
-    internal func waitOnCommand() -> Result<Void, CarthageError> {
+    internal func waitOnCommand() -> Result<(), CarthageError> {
         let result = producer
             .then(SignalProducer<Void, CarthageError>.empty)
             .wait()
 
         Task.waitForAllTaskTermination()
-        return .failure(result.error ?? CarthageError.internalError(description: "unkown error."))
+        switch result {
+        case .success:
+            return .success(())
+        case let .failure(error):
+            return .failure(error)
+        }
     }
 }
