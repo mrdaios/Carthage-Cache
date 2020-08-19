@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     tags:        
-      - v*
+      - V*
 jobs:
   build:
     runs-on: macos-latest
@@ -18,16 +18,16 @@ jobs:
     - name: Zip file
       run: |
         zip --junk-paths carthage_cache.zip .build/release/carthage_cache
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
+    # - name: Create Release
+    #   id: create_release
+    #   uses: actions/create-release@v1
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #   with:
+    #     tag_name: ${{ github.ref }}
+    #     release_name: Release ${{ github.ref }}
+    #     draft: false
+    #     prerelease: false
     - name: Upload Release Asset
       id: upload-release-asset 
       uses: actions/upload-release-asset@v1
