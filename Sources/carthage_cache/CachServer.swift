@@ -11,6 +11,7 @@ import ReactiveSwift
 
 protocol CachServerable {
     func upload(_ versionFile: VersionFile, projectDirectory: String) -> SignalProducer<Dictionary<String, Any>, CarthageError>
+    func upload(localPath: String, remotePath: String) -> SignalProducer<Dictionary<String, Any>, CarthageError>
 }
 
 struct GitLabCachServer: CachServerable {
@@ -20,6 +21,37 @@ struct GitLabCachServer: CachServerable {
     init(repo: String, repoConfig: [String: Any]) {
         self.repo = repo
         self.repoConfig = repoConfig
+    }
+
+    func upload(localPath: String, remotePath: String) -> SignalProducer<[String: Any], CarthageError> {
+        guard let commitURL = buildCommitURL() else {
+            return SignalProducer(error: .internalError(description: "not found url."))
+        }
+
+        var commitJSON: [String: Any] = [:]
+        commitJSON["start_branch"] = "master"
+        commitJSON["branch"] = localPath
+        commitJSON["commit_message"] = "[Auto Upload]\(localPath)"
+
+        let uploadFileURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true).appendingPathComponent(localPath)
+        let data = try? Data(contentsOf: uploadFileURL).base64EncodedString()
+        commitJSON["actions"] = [
+            [
+                "action": "create",
+                "file_path": remotePath,
+                "content": data,
+                "encoding": "base64",
+            ],
+        ]
+
+        var request = URLRequest(url: commitURL)
+        request.httpMethod = "POST"
+        if let token = repoConfig["PRIVATE-TOKEN"] as? String {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: commitJSON, options: .fragmentsAllowed)
+        return uploadRequest(urlRequest: request)
     }
 
     func upload(_ versionFile: VersionFile, projectDirectory: String) -> SignalProducer<Dictionary<String, Any>, CarthageError> {
